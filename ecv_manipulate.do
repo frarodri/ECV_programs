@@ -4,8 +4,8 @@ set more off
 * Write here the main folder, where the folders rawdata, output, intermediate 
 * and programs are located:
  
-global rootdir  "C:\Users\lidic\OneDrive\Escritorio\Cruces&Rodríguez\Encuesta de Condiciones de Vida\ECV\working"
-*global rootdir "C:\Users\franj\Documents\GitHub\ECV\working"
+*global rootdir  "C:\Users\lidic\OneDrive\Escritorio\Cruces&Rodríguez\Encuesta de Condiciones de Vida\ECV\working"
+global rootdir "G:\My Drive\ECV\working"
 
 global rawdata "$rootdir\rawdata"
 global output "$rootdir\output"
@@ -92,8 +92,11 @@ keep if child==`i'
 
 keep year pid mid children cc1 cc2 cce cceo ccb ccin birthyr
 
+* I generate the variable of child's age so that is years old at the beginning 
+* of the year, because that's how eligibility for school is determined in Spain
 gen child=1
-gen age=year-birthyr
+gen age=year-birthyr-1
+replace age=0 if age<0
 
 rename _all =_`i'
 rename year_`i' year
@@ -128,7 +131,7 @@ erase ecv_spouse.dta
 *******
 
 * Generate age variable
-gen age=year-birthyr
+gen age=year-birthyr-1
 label var age "Age"
 
 * Recode age variable to fit our 3-year periods
@@ -334,14 +337,14 @@ save ecv_temp.dta, replace
 * Keep only women and variables we need *
 *****************************************
 
-keep if sex==2 & lifeper>=1 & births<=3
+keep if sex==2 & lifeper>=1 & births<=3 & nchild<=3
 
 keep year age lifeper marst mom nchild age_yng lifeper_yng age_eld ///
 age_fbirth lfp cc_presch_yng cc_sch_yng cc_xsch_yng cc_xother_yng cc_pro_yng ///
 cc_inf_yng cc_paid_yng cc_unpaid_yng hhinc_5tile perwt_cs pweight_16plus
 
 cd "$output"
-save ecv_clean.dta, replace
+save ecv_women.dta, replace
 
 * Graphs and tables *
 *********************
@@ -396,7 +399,7 @@ restore
 * I want to check whether few households have access to informal childcare
 * INSTALL ssc install asgen
 preserve
-generate access_cc_inf = 0 
+generate access_cc_inf = 0  
 replace access_cc_inf = 1 if cc_inf_yng >0
 replace access_cc_inf = 0 if cc_inf_yng == .
 * Access : IS THE WEIGHT THE CORRECT ONE?
@@ -406,10 +409,10 @@ sum avg_access_cc_inf ,by year
 *Use if they have access
 keep if access_cc_inf == 1
 
-collapse cc_inf_yng  if age_yng<=12 [iweight=perwt_cs], ///
+collapse cc_inf_yng if age_yng<=12 [iweight=perwt_cs], ///
 by(year lfp age_yng)
 
-collapse cc_inf_yng , by(lfp age_yng)
+collapse cc_inf_yng, by(lfp age_yng)
 
 twoway ///
 (line cc_inf_yng age_yng if lfp==0 & age_yng<=5) ///
@@ -573,3 +576,74 @@ name(lfp_age_gap)
 
 
 restore
+
+************************
+* Moments for the model*
+************************
+
+* Participation rates by age of youngest child
+
+preserve
+
+tab lfp, generate(lfp)
+
+collapse lfp1-lfp3 [iweight=perwt_cs], by(year lifeper_yng)
+
+collapse lfp1-lfp3, by(lifeper_yng)
+
+gen total_lfp=lfp2+lfp3
+gen pt_ft=lfp2/lfp3
+
+label var lfp1 "Out of labor force"
+label var lfp2 "Part time"
+label var lfp3 "Full time"
+label var total_lfp "Labor force participation"
+label var pt_ft "Part time to full time ratio"
+
+twoway ///
+(line lfp1 lifeper_yng) ///
+(line lfp2 lifeper_yng) ///
+(line lfp3 lifeper_yng), ///
+scheme(sj) graphr(c(white)) ///
+xtitle("Age of youngest child") ytitle("%") ///
+xlabel(1 2 3 4 5 6, valuelabel) ///
+legend(order(1 2 3) label(1 "Out of labor force") label(2 "Part time") ///
+label(3 "Full time") cols(1) region(c(white))) ///
+name(lfp_lifeper_yng)
+
+twoway ///
+line total_lfp lifeper_yng, ///
+scheme(sj) graphr(c(white)) ///
+xtitle("Age of youngest child") ytitle("%") ///
+xlabel(1 2 3 4 5 6, valuelabel) 
+
+export excel using Model_moments.xlsx, sheet("lfp_moms") sheetreplace ///
+firstrow(varl) 
+
+restore
+
+* Participation rates for childless women
+
+tab lfp, generate(lfp)
+
+collapse lfp1-lfp3 if mom==0 [iweight=perwt_cs], by(year lifeper)
+
+collapse lfp1-lfp3, by(lifeper)
+
+gen total_lfp=lfp2+lfp3
+gen pt_ft=lfp2/lfp3
+
+label var lfp1 "Out of labor force"
+label var lfp2 "Part time"
+label var lfp3 "Full time"
+label var total_lfp "Labor force participation"
+label var pt_ft "Part time to full time ratio"
+
+export excel using Model_moments.xlsx, sheet("lfp_childless") sheetreplace ///
+firstrow(varl) 
+
+
+restore
+
+
+
