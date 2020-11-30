@@ -16,8 +16,8 @@ set more off
 
 * Write here the main folder, where the folders rawdata, output, intermediate 
 * and programs are located:
-*global rootdir "C:\Users\franj\Documents\GitHub\ECV\working"
-global rootdir  "C:\Users\lidic\OneDrive\Escritorio\Cruces&Rodríguez\Encuesta de Condiciones de Vida\ECV\working"
+global rootdir "G:\My Drive\ECV\working"
+*global rootdir  "C:\Users\lidic\OneDrive\Escritorio\Cruces&Rodríguez\Encuesta de Condiciones de Vida\ECV\working"
 global rawdata "$rootdir\rawdata"
 global output "$rootdir\output"
 global intermediate "$rootdir\intermediate"
@@ -317,7 +317,7 @@ pl170_f pl180 pl180_f pl190 pl190_f pl200 pl200_f pl211a pl211a_f pl211b ///
 pl211b_f pl211c pl211c_f pl211d pl211d_f pl211e pl211e_f pl211f pl211f_f ///
 pl211g pl211g_f pl211h pl211h_f pl211i pl211i_f pl211j pl211j_f pl211k ///
 pl211k_f pl211l pl211l_f) ///
-(empstat_raw empstat_raw_f everworked everworked_f worksearch4wp ///
+(empstatraw empstatraw_f everworked everworked_f worksearch4wp ///
 worksearch4wp_f workavail2w workavail2w_f empsit empsit_f occup occup_f ///
 wrkhrs_wk wrkhrs_wk_f months_ftsal months_ftsal_f months_ptsal ///
 months_ptsal_f months_ftse months_ftse_f months_ptse months_ptse_f ///
@@ -325,15 +325,17 @@ months_ue months_ue_f months_ret months_ret_f months_dis months_dis_f ///
 months_study months_study_f months_hwrk months_hwrk_f months_other ///
 months_other_f wrkhrsother_wk wrkhrsother_wk_f ind ind_f rless30h rless30h_f ///
 nemp nemp_f conttype conttype_f superv superv_f jobch12m jobch12m_f jobchr ///
-jobchr_f empstatch empstatch_f agestartwrk agestartwrk_f yearswrk yearswrk_f ///
-empstatjan empstatjan_f empstatfeb empstatfeb_f empstatmar empstatmar_f ///
-empstatapr empstatapr_f empstatmay empstatmay_f empstatjun empstatjun_f ///
-empstatjul empstatjul_f empstataug empstataug_f empstatsep empstatsep_f ///
-empstatoct empstatoct_f empstatnov empstatnov_f empstatdec empstatdec_f)
+jobchr_f empstatrawch empstatrawch_f agestartwrk agestartwrk_f yearswrk ///
+yearswrk_f empstatraw_jan empstatraw_jan_f empstatraw_feb empstatraw_feb_f ///
+empstatraw_mar empstatraw_mar_f empstatraw_apr empstatraw_apr_f ///
+empstatraw_may empstatraw_may_f empstatraw_jun empstatraw_jun_f ///
+empstatraw_jul empstatraw_jul_f empstatraw_aug empstatraw_aug_f ///
+empstatraw_sep empstatraw_sep_f empstatraw_oct empstatraw_oct_f ///
+empstatraw_nov empstatraw_nov_f empstatraw_dec empstatraw_dec_f)
 
 * Label variables
-label var empstat_raw "Employment status (raw)" 
-label var empstat_raw_f "Employment status (raw) flag" 
+label var empstatraw "Employment status (raw)" 
+label var empstatraw_f "Employment status (raw) flag" 
 label var everworked "Has ever worked" 
 label var everworked_f "Has ever worked flag"
 label var worksearch4wp "Has searched for work in previous 4 weeks"
@@ -347,13 +349,17 @@ label var occup_f "Current or last occupation flag"
 label var wrkhrs_wk "Hours worked per week (main job)"
 label var wrkhrs_wk_f "Hours worked per week (main job) flag" 
 label var months_ftsal "Number of months full-time salaried worker last year"
-label var months_ftsal_f "Number of months full-time salaried worker last year flag"
+label var months_ftsal_f ///
+"Number of months full-time salaried worker last year flag"
 label var months_ptsal "Number of months part-time salaried worker last year"
-label var months_ptsal_f "Number of months part-time salaried worker last year flag"
+label var months_ptsal_f ///
+"Number of months part-time salaried worker last year flag"
 label var months_ftse "Number of months full-time self employed last year"
-label var months_ftse_f "Number of months full-time self employed last year flag"
+label var months_ftse_f ///
+"Number of months full-time self employed last year flag"
 label var months_ptse "Number of months part-time self employed last year"
-label var months_ptse_f "Number of months part-time self employed last year flag"
+label var months_ptse_f ///
+"Number of months part-time self employed last year flag"
 label var months_ue "Number of months unemployed last year" 
 label var months_ue_f "Number of months unemployed last year flag"
 label var months_ret "Number of months retired last year"
@@ -363,9 +369,11 @@ label var months_dis_f "Number of months disabled last year flag"
 label var months_study "Number of months student last year" 
 label var months_study_f "Number of months disabled last year flag"
 label var months_hwrk "Number of months housework, child care etc. last year"
-label var months_hwrk_f "Number of months housework, child care etc. last year flag"
+label var months_hwrk_f ///
+"Number of months housework, child care etc. last year flag"
 label var months_other "Number of months inactive for other reasons last year"
-label var months_other_f "Number of months inactive for other reasons last year flag"
+label var months_other_f ///
+"Number of months inactive for other reasons last year flag"
 label var wrkhrsother_wk "Hours worked per week (other jobs)"
 label var wrkhrsother_wk_f "Hours worked per week (other jobs) flag" 
 label var ind "Industry of current or last job"
@@ -382,39 +390,39 @@ label var jobch12m "Has changed job in last 12 months"
 label var jobch12m_f "Has changed job in last 12 months flag"
 label var jobchr "Reason for job change"
 label var jobchr_f "Reason for job change flag"
-label var empstatch "Most recent employment status change"
-label var empstatch_f "Most recent employment status change flag"
+label var empstatrawch "Most recent employment status change"
+label var empstatrawch_f "Most recent employment status change flag"
 label var agestartwrk "Age start regular work"
 label var agestartwrk_f "Age start regular work flag"
 label var yearswrk "Years of paid work"
 label var yearswrk_f "Years of paid work flag"
-label var empstatjan "Employment status in January" 
-label var empstatjan_f "Employment status in January flag"
-label var empstatfeb "Employment status in February"
-label var empstatfeb_f "Employment status in February flag"
-label var empstatmar "Employment status in March"
-label var empstatmar_f "Employment status in March flag"
-label var empstatapr "Employment status in April"
-label var empstatapr_f "Employment status in April flag"
-label var empstatmay "Employment status in May "
-label var empstatmay_f "Employment status in May flag"
-label var empstatjun "Employment status in June"
-label var empstatjun_f "Employment status in June flag"
-label var empstatjul "Employment status in July"
-label var empstatjul_f "Employment status in July flag"
-label var empstataug "Employment status in August"
-label var empstataug_f "Employment status in August flag"
-label var empstatsep "Employment status in September"
-label var empstatsep_f "Employment status in September flag"
-label var empstatoct "Employment status in October"
-label var empstatoct_f "Employment status in October flag"
-label var empstatnov "Employment status in November"
-label var empstatnov_f "Employment status in November flag"
-label var empstatdec "Employment status in December"
-label var empstatdec_f "Employment status in December flag"
+label var empstatraw_jan "Employment status in January" 
+label var empstatraw_jan_f "Employment status in January flag"
+label var empstatraw_feb "Employment status in February"
+label var empstatraw_feb_f "Employment status in February flag"
+label var empstatraw_mar "Employment status in March"
+label var empstatraw_mar_f "Employment status in March flag"
+label var empstatraw_apr "Employment status in April"
+label var empstatraw_apr_f "Employment status in April flag"
+label var empstatraw_may "Employment status in May "
+label var empstatraw_may_f "Employment status in May flag"
+label var empstatraw_jun "Employment status in June"
+label var empstatraw_jun_f "Employment status in June flag"
+label var empstatraw_jul "Employment status in July"
+label var empstatraw_jul_f "Employment status in July flag"
+label var empstatraw_aug "Employment status in August"
+label var empstatraw_aug_f "Employment status in August flag"
+label var empstatraw_sep "Employment status in September"
+label var empstatraw_sep_f "Employment status in September flag"
+label var empstatraw_oct "Employment status in October"
+label var empstatraw_oct_f "Employment status in October flag"
+label var empstatraw_nov "Employment status in November"
+label var empstatraw_nov_f "Employment status in November flag"
+label var empstatraw_dec "Employment status in December"
+label var empstatraw_dec_f "Employment status in December flag"
 
 * Label values
-label define empstat_raw_lbl ///
+label define empstatraw_lbl ///
 1 "Full-time salaried worker" ///
 2 "Part-time salaried worker" ///
 3 "Full-time self employed" ///
@@ -485,7 +493,7 @@ label define jobchr_lbl ///
 6 "Marriage-relocation of partner" ///
 7 "Other reasons"
 
-label define empstatch_lbl ///
+label define empstatrawch_lbl ///
 1 "Employment to unemployment" ///
 2 "Employment to retirement" ///
 3 "Employment to other type of inactivity" ///
@@ -499,16 +507,16 @@ label define empstatch_lbl ///
 11 "Other type of inactivity to unemployment" ///
 12 "Other type of inactivity to retirement" 
 
-label values empstat_raw empstatjan empstatfeb empstatmar empstatapr ///
-empstatmay empstatjun empstatjul empstataug empstatsep empstatoct empstatnov ///
-empstatdec empstat_raw_lbl
+label values empstatraw empstatraw_jan empstatraw_feb empstatraw_mar empstatraw_apr ///
+empstatraw_may empstatraw_jun empstatraw_jul empstatraw_aug empstatraw_sep empstatraw_oct empstatraw_nov ///
+empstatraw_dec empstatraw_lbl
 label values everworked worksearch4wp workavail2w superv jobch12m yesno
 label values empsit empsit_lbl
 label values ind_num ind_lbl
 label values rless30h rless30h_lbl
 label values conttype conttype_lbl
 label values jobchr jobchr_lbl
-label values empstatch empstatch_lbl
+label values empstatrawch empstatrawch_lbl
 
 * Health *
 

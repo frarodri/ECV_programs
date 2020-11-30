@@ -26,9 +26,10 @@ use "ecv.dta" ,clear
 drop if missing(sid)
 
 * Keep only variables we want
-keep sid year empstatjan empstatfeb empstatmar empstatapr empstatmay ///
-empstatjun empstatjul empstataug empstatsep empstatoct empstatnov empstatdec ///
-months_hwrk months_ptse months_ftse wrkhrs_wk ninc_mon ginc_mon birthyr 
+keep sid year empstatraw_jan empstatraw_feb empstatraw_mar empstatraw_apr ///
+empstatraw_may empstatraw_jun empstatraw_jul empstatraw_aug empstatraw_sep ///
+empstatraw_oct empstatraw_nov empstatraw_dec months_hwrk months_ptse ///
+months_ftse wrkhrs_wk ninc_mon ginc_mon birthyr 
 
 * Add suffix _spouse to all variables except year
 rename _all  =_spouse
@@ -236,32 +237,119 @@ label var age_fbirth "Age at first birth"
 * Generate labor force participation variable *
 ***********************************************
 
-* First we recode the monthly employment status variables into a labor force 
-* participation variable that takes a value of 1 if the person worked full time,
-* 0.5 if she worked part time and 0 if she did not work
-recode empstat* (1 3 = 1) (2 4 = 0.5) (5/11 = 0), pre(lfp)
-rename lfpempstat_* lfp_*
-rename lfpempstat* lfp_*
+* First we recode the monthly employment status variables into labor force 
+* participation variables ft, pt, ue and olf, which contain the the number of 
+* months that the person spent working full time, par time, unemployed and out 
+* of the labor force. We compare these variables to the results obtained from 
+* variables months_ftsal months_ptsal months_ftse months_ptse months_ue 
+* months_ret months_dis months_study months_hwrk and months_other
 
-* We need to drop a bunch of variables that were created that we don't need
-drop lfp_raw lfp_raw_f lfp_ch lfp_ch_f lfp_jan_f lfp_feb_f lfp_mar_f ///
-lfp_apr_f lfp_may_f lfp_jun_f lfp_jul_f lfp_aug_f lfp_sep_f lfp_oct_f ///
-lfp_nov_f lfp_dec_f lfp_jan_spouse-lfp_dec_spouse
+* Full time employment
+recode empstatraw_* (1 3 = 1) (nonmi = 0), pre(ft_)
+rename ft_empstatraw_* ft_*
+drop ft_f ft_jan_f ft_feb_f ft_mar_f ft_apr_f ft_may_f ft_jun_f ft_jul_f ///
+ft_aug_f ft_sep_f ft_oct_f ft_nov_f ft_dec_f ft_jan_spouse-ft_dec_spouse
+egen ft=rowtotal(ft_*)
+label var ft "Months spent working full time last year"
 
-* Finally we generate the average lfp during the year
-egen lfp=rowtotal(lfp_*)
-replace lfp=lfp/12
-* Round to the nearest 1/2 n=and multiply by 2 so that 0 means out of labor 
-* force, 1 part time and 2 full time (to be able to label it)
-replace lfp=round(lfp,0.5)*2
+gen months_ft=months_ftsal+months_ftse
+label var months_ft "Months spent working full time last year"
 
-label var lfp "Labor force participation"
+count if months_ft!=ft & !missing(months_ft) & !missing(ft) 
+
+drop ft_jan-ft_dec
+
+* Part time employment
+recode empstatraw_* (2 4 = 1) (nonmi = 0), pre(pt_)
+rename pt_empstatraw_* pt_*
+drop pt_f pt_jan_f pt_feb_f pt_mar_f pt_apr_f pt_may_f pt_jun_f pt_jul_f ///
+pt_aug_f pt_sep_f pt_oct_f pt_nov_f pt_dec_f pt_jan_spouse-pt_dec_spouse
+egen pt=rowtotal(pt_*)
+label var pt "Months spent working part time last year"
+
+gen months_pt=months_ptsal+months_ptse
+label var months_pt "Months spent working part time last year"
+
+count if months_pt!=pt & !missing(months_pt) & !missing(pt)
+
+drop pt_jan-pt_dec 
+
+* Unemployment
+recode empstatraw_* (5 = 1) (nonmi = 0), pre(ue_)
+rename ue_empstatraw_* ue_*
+drop ue_f ue_jan_f ue_feb_f ue_mar_f ue_apr_f ue_may_f ue_jun_f ue_jul_f ///
+ue_aug_f ue_sep_f ue_oct_f ue_nov_f ue_dec_f ue_jan_spouse-ue_dec_spouse
+egen ue=rowtotal(ue_*)
+label var ue "Months spent in unemployment last year"
+
+count if months_ue!=ue & !missing(months_ue) & !missing(ue) 
+
+drop ue_jan-ue_dec
+
+* Out of labor force
+recode empstatraw_* (6/11 = 1) (nonmi = 0), pre(olf_)
+rename olf_empstatraw_* olf_*
+drop olf_f olf_jan_f olf_feb_f olf_mar_f olf_apr_f olf_may_f olf_jun_f ///
+olf_jul_f olf_aug_f olf_sep_f olf_oct_f olf_nov_f olf_dec_f ///
+olf_jan_spouse-olf_dec_spouse
+egen olf=rowtotal(olf_*)
+label var olf "Months spent working part time last year"
+
+gen months_olf=months_ret+months_dis+months_study+months_hwrk+months_other
+label var months_olf "Months spent working part time last year"
+
+count if months_olf!=olf & !missing(months_olf) & !missing(olf)
+
+drop olf_jan-olf_dec 
+
+* No differences were found between the manually calculated variables and the 
+* ones already present in the dataset.
+
+* We first creat a current lfp variable
+recode empstatraw (1 3 = 3) (2 4 = 2) (5 = 1) (6/11=0), gen(lfp_current)
+label var lfp_current "Current labor force status"
+
 label define lfp_lbl ///
-0 "Out of labor force" ///
-1 "Part-time work" ///
-2 "Full-time work"
+3 "Full time work" ///
+2 "Part time work" ///
+1 "Unemployed" ///
+0 "Out of the labor force" 
 
-label values lfp lfp_lbl
+label values lfp_current lfp_lbl
+
+* Now we create LFP variables for the year. 
+
+* First we count total months in labor force
+gen inlf_months=ft+pt+ue
+* We then compute the number of months the person actually worked
+gen work_months=ft+pt
+* Compute total hours worked during the months in labor force, where a full time 
+* month is 1, part-time month 0.5 and unemployment is zero
+gen hours_inlf=ft+0.5*pt
+* Compute average hours worked when in lf
+gen avg_hours_inlf=hours_inlf/inlf_months
+
+* Generate lfp for the year
+* First we assign to in labor force those who had worked for more than 6 months
+* during the year, or whose average hours multiplied by their months in the 
+*labor force are enough to bump them to part-time
+gen inlf_yr=1 if inlf_months>5 | ///
+(!missing(avg_hours_inlf) & avg_hours_inlf*work_months>3)
+replace inlf_yr=0 if missing(inlf_yr)
+
+* Then we create the lfp variable for the year
+* We first create a variable that recodes the average hours for people 
+* considered to be in the labor force, to 0 when for unemployed (person reported
+* being in the labor force but didn't work enough hours to reach par time), 1
+* for part time and 2 for full time
+egen lfp_yr=cut(avg_hours_inlf), at(0,0.25,0.75,1.25) icodes
+* Add 1 to match the lfp_current
+replace lfp_yr=lfp_yr+1
+* Add people olf with a zero
+replace lfp_yr=0 if missing(lfp_yr)
+
+label var lfp_yr "Yearly labor force status"
+label values lfp_yr lfp_lbl
 
 * Generate childcare variables *
 ********************************
@@ -301,8 +389,8 @@ label var cc_paid_yng "Weekly hours of paid childcare for youngest child"
 label var cc_unpaid_yng "Weekly hours of unpaid childcare for youngest child" 
 
 gen cc_mom=(24-8)*5-cc_paid-cc_unpaid
-gen wrk_hrs=(lfp==0)*0+(lfp==1)*20+(lfp==2)*40
-gen le_hrs_mom=(24-8)*5-cc_mom-wrk_hrs if mom==1 & age_yng<=12
+*gen wrk_hrs=(lfp==0)*0+(lfp==1)*20+(lfp==2)*40
+*gen le_hrs_mom=(24-8)*5-cc_mom-wrk_hrs if mom==1 & age_yng<=12
 
 * Income quintile *
 *******************
@@ -340,8 +428,9 @@ save ecv_temp.dta, replace
 keep if sex==2 & lifeper>=1 & births<=3 & nchild<=3
 
 keep year age lifeper marst mom nchild age_yng lifeper_yng age_eld ///
-age_fbirth lfp cc_presch_yng cc_sch_yng cc_xsch_yng cc_xother_yng cc_pro_yng ///
-cc_inf_yng cc_paid_yng cc_unpaid_yng hhinc_5tile perwt_cs pweight_16plus
+age_fbirth lfp_current lfp_yr cc_presch_yng cc_sch_yng cc_xsch_yng ///
+cc_xother_yng cc_pro_yng cc_inf_yng cc_paid_yng cc_unpaid_yng hhinc_5tile ///
+perwt_cs pweight_16plus
 
 cd "$output"
 save ecv_women.dta, replace
@@ -585,30 +674,36 @@ restore
 
 preserve
 
-tab lfp, generate(lfp)
+tab lfp_yr, generate(lfp)
 
-collapse lfp1-lfp3 [iweight=perwt_cs], by(year lifeper_yng)
+collapse lfp1-lfp4 [iweight=perwt_cs], by(year lifeper_yng)
 
-collapse lfp1-lfp3, by(lifeper_yng)
+collapse lfp1-lfp4, by(lifeper_yng)
 
-gen total_lfp=lfp2+lfp3
-gen pt_ft=lfp2/lfp3
+foreach x of varlist lfp1-lfp4 {
+	replace `x'=`x'*100
+} 
+
+gen total_lfp=lfp2+lfp3+lfp4
+gen pt_ft=lfp3/lfp4
 
 label var lfp1 "Out of labor force"
+label var lfp2 "Unemployed"
 label var lfp2 "Part time"
-label var lfp3 "Full time"
+label var lfp4 "Full time"
 label var total_lfp "Labor force participation"
 label var pt_ft "Part time to full time ratio"
 
 twoway ///
 (line lfp1 lifeper_yng) ///
 (line lfp2 lifeper_yng) ///
-(line lfp3 lifeper_yng), ///
+(line lfp3 lifeper_yng) ///
+(line lfp4 lifeper_yng), ///
 scheme(sj) graphr(c(white)) ///
 xtitle("Age of youngest child") ytitle("%") ///
 xlabel(1 2 3 4 5 6, valuelabel) ///
-legend(order(1 2 3) label(1 "Out of labor force") label(2 "Part time") ///
-label(3 "Full time") cols(1) region(c(white))) ///
+legend(order(1 2 3 4) label(1 "Out of labor force") label(2 "Unemployed") ///
+label(3 "Part time") label(4 "Full time") cols(1) region(c(white))) ///
 name(lfp_lifeper_yng)
 
 twoway ///
