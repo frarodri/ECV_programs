@@ -239,7 +239,7 @@ label var age_fbirth "Age at first birth"
 
 * First we recode the monthly employment status variables into labor force 
 * participation variables ft, pt, ue and olf, which contain the the number of 
-* months that the person spent working full time, par time, unemployed and out 
+* months that the person spent working full time, part time, unemployed and out 
 * of the labor force. We compare these variables to the results obtained from 
 * variables months_ftsal months_ptsal months_ftse months_ptse months_ue 
 * months_ret months_dis months_study months_hwrk and months_other
@@ -440,14 +440,15 @@ save ecv_women.dta, replace
 
 * Childcare use *
 
+* By age
 preserve
 
 collapse cc_presch_yng cc_sch_yng cc_xsch_yng cc_xother_yng cc_pro_yng ///
 cc_inf_yng cc_paid_yng cc_unpaid_yng if age_yng<=12 [iweight=perwt_cs], ///
-by(year lfp age_yng)
+by(year lfp_yr age_yng)
 
 collapse cc_presch_yng cc_sch_yng cc_xsch_yng cc_xother_yng cc_pro_yng ///
-cc_inf_yng cc_paid_yng cc_unpaid_yng, by(lfp age_yng)
+cc_inf_yng cc_paid_yng cc_unpaid_yng, by(lfp_yr age_yng)
 
 twoway ///
 (line cc_presch_yng age_yng if lfp==0 & age_yng<=5) ///
@@ -484,6 +485,33 @@ name(ccpaid_lfp)
 
 restore 
 
+* By model life period
+preserve
+
+collapse cc_presch_yng cc_sch_yng cc_xsch_yng cc_xother_yng cc_pro_yng ///
+cc_inf_yng cc_paid_yng cc_unpaid_yng if age_yng<=12 [iweight=perwt_cs], ///
+by(year lfp_yr lifeper_yng)
+
+collapse cc_presch_yng cc_sch_yng cc_xsch_yng cc_xother_yng cc_pro_yng ///
+cc_inf_yng cc_paid_yng cc_unpaid_yng, by(lfp_yr lifeper_yng)
+
+graph bar cc_presch_yng if lfp_yr<=2 & lifeper_yng<=2, ///
+over(lfp_yr, relabel(1 "Inactive" 2 "Part time" 3 "Full time" )) ///
+over(lifeper_yng, relabel(1 "0 to 3 years old" 2 "3 to 6 years old")) ///
+scheme(sj) graphr(c(white)) ytitle("Hours per week") ///
+name(presch_lfp_lifeper_yng)
+
+graph bar cc_inf_yng if lfp_yr<=2 & lifeper_yng<=2, ///
+over(lfp_yr, relabel(1 "Inactive" 2 "Part time" 3 "Full time" )) ///
+over(lifeper_yng, relabel(1 "0 to 3 years old" 2 "3 to 6 years old")) ///
+scheme(sj) graphr(c(white)) ytitle("Hours per week") ///
+name(inf_lfp_lifeper_yng)
+
+graph bar cc_paid_yng if lfp_yr<=2 & lifeper_yng<=2, ///
+over(lfp_yr, relabel(1 "Inactive" 2 "Part time" 3 "Full time" )) ///
+over(lifeper_yng, relabel(1 "0 to 3 years old" 2 "3 to 6 years old")) ///
+scheme(sj) graphr(c(white)) ytitle("Hours per week") ///
+name(paid_lfp_lifeper_yng)
 
 * I want to check whether few households have access to informal childcare
 * INSTALL ssc install asgen
@@ -558,47 +586,52 @@ preserve
 * Labor force participation *
 
 * By model life period
-tab lfp, generate(lfp)
+drop if lfp_yr==1
+tab lfp_yr, generate(lfp_yr)
 
 *rename lfp1 olf
 *rename lfp2 pt
 *rename lfp3 ft
 
 
-collapse lfp1-lfp3 if lifeper<13 [iweight=perwt_cs], by(year lifeper mom)
+collapse lfp_yr1-lfp_yr3 if lifeper<13 [iweight=perwt_cs], by(year lifeper mom)
 
-collapse lfp1-lfp3, by(lifeper mom)
+collapse lfp_yr1-lfp_yr3, by(lifeper mom)
+
+replace lfp_yr1=lfp_yr1*100
+replace lfp_yr2=lfp_yr2*100
+replace lfp_yr3=lfp_yr3*100
 
 * Childless women
 twoway ///
-(line lfp1 lifeper if mom==0) ///
-(line lfp2 lifeper if mom==0) ///
-(line lfp3 lifeper if mom==0), ///
+(line lfp_yr2 lifeper if mom==0) ///
+(line lfp_yr3 lifeper if mom==0), ///
 scheme(sj) graphr(c(white)) ///
-xtitle("Age") ytitle("Fraction of women") ///
-legend(order(1 2 3) label(1 "Out of labor force") label(2 "Part-time work") ///
-label(3 "Full-time work") cols(1) region(c(white))) ///
-xlabel(1 4 7 10, valuelabel) ///
+xtitle("Age") ytitle("% of women") ///
+legend(order(1 2) label(1 "Part-time") ///
+label(2 "Full-time") rows(1) region(c(white))) ///
+xlabel(1 "30 to 33" 3 "36 to 39" 5 "42 to 45" 7 "48 to 51" 9 "54 to 57" ///
+11 "60 to 63") ///
 name(lfp_childless)
 
 * Moms
 twoway ///
-(line lfp1 lifeper if mom==1) ///
-(line lfp2 lifeper if mom==1) ///
-(line lfp3 lifeper if mom==1), ///
+(line lfp_yr2 lifeper if mom==1) ///
+(line lfp_yr3 lifeper if mom==1), ///
 scheme(sj) graphr(c(white)) ///
-xtitle("Age") ytitle("Fraction of women") ///
-legend(order(1 2 3) label(1 "Out of labor force") label(2 "Part-time work") ///
-label(3 "Full-time work") cols(1) region(c(white))) ///
-xlabel(1 4 7 10, valuelabel) ///
+xtitle("Age") ytitle("% of women") ///
+legend(order(1 2) label(1 "Part-time") ///
+label(2 "Full-time") rows(1) region(c(white))) ///
+xlabel(1 "30 to 33" 3 "36 to 39" 5 "42 to 45" 7 "48 to 51" 9 "54 to 57" ///
+11 "60 to 63") ///
 name(lfp_mom)
 
 * Gap
 
 reshape wide lfp*, i(lifeper) j(mom)
 
-gen ptgap=(lfp20-lfp21)*100
-gen ftgap=(lfp30-lfp31)*100
+gen ptgap=(lfp_yr21-lfp_yr20)
+gen ftgap=(lfp_yr31-lfp_yr30)
 gen gap=ptgap+ftgap
 
 twoway ///
@@ -606,9 +639,9 @@ twoway ///
 (line ftgap lifeper) ///
 (line gap lifeper), ///
 scheme(sj) graphr(c(white)) ///
-xtitle("Age") ytitle("%") ///
+xtitle("Age") ytitle("Percentage points") ///
 legend(order(1 2 3) label(1 "Part-time gap") label(2 "Full-time gap") ///
-label(3 "Participation gap") cols(1) region(c(white))) ///
+label(3 "Participation gap") rows(1) region(c(white))) ///
 xlabel(1 4 7 10, valuelabel) ///
 name(lfp_gap)
 
