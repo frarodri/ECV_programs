@@ -10,7 +10,7 @@ global rootdir "G:\My Drive\ECV\working"
 global rawdata "$rootdir\rawdata"
 global output "$rootdir\output"
 global intermediate "$rootdir\intermediate"
-global programs "$rootdir\programs"
+global programs "$rootdir\ECV_programs"
 
 cd "$rootdir"
 
@@ -38,7 +38,7 @@ rename year_spouse year
 * Rename spouse's spouse's id to person id
 rename sid_spouse pid
 
-duplicates drop 
+duplicates drop year pid, force
 
 * Save the spouse's dataset
 cd "$intermediate"
@@ -65,7 +65,7 @@ use "ecv.dta" ,clear
 * Remove all person/year observations with no mother's data 
 drop if missing(mid)
 
-* Drop everyone older than 18?
+* Drop everyone older than 18? No
 *drop if year-birthyr>18
 
 * Create a variable (child) that tells us the birth order. 1= first child, 
@@ -81,17 +81,14 @@ sort id_year birthyr
 by id_year, sort: gen child = _n
 bysort id_year: gen children = _N
 
-* Drop person id and rename mother's person id
-*rename pid chid
-*rename mid pid
-
-* One by one, create a file with the data for the 1st, 2nd, 3rd child.
+* One by one, create a file with the data for each child.
 forvalues i=1(1)12{
 
 preserve 
 keep if child==`i'
 
-keep year pid mid children cc1 cc2 cce cceo ccb ccin birthyr
+keep year pid mid children cc_presch cc_sch cc_xsch cc_other cc_pro ///
+cc_inf ccweight birthyr
 
 * I generate the variable of child's age so that is years old at the beginning 
 * of the year, because that's how eligibility for school is determined in Spain
@@ -132,7 +129,7 @@ erase ecv_spouse.dta
 *******
 
 * Generate age variable
-gen age=year-birthyr-1
+gen age=year-birthyr
 label var age "Age"
 
 * Recode age variable to fit our 3-year periods
@@ -155,17 +152,17 @@ recode age ///
 label var lifeper "Model equivalent life period"
 label define lifeper_lbl ///
 0 "29 and younger" ///
-1 "30 to 32" ///
-2 "33 to 35" ///
-3 "36 to 38" ///
-4 "39 to 41" ///
-5 "42 to 44" ///
-6 "45 to 47" ///
-7 "48 to 50" ///
-8 "51 to 53" ///
-9 "54 to 56" ///
-10 "57 to 59" ///
-11 "60 to 62" ///
+1 "30 to 33" ///
+2 "33 to 36" ///
+3 "36 to 39" ///
+4 "39 to 42" ///
+5 "42 to 45" ///
+6 "45 to 48" ///
+7 "48 to 51" ///
+8 "51 to 54" ///
+9 "54 to 57" ///
+10 "57 to 60" ///
+11 "60 to 63" ///
 12 "63 to 66" ///
 13 "67 and older"
 label values lifeper lifeper_lbl
@@ -183,11 +180,11 @@ forvalues i=1(1)12{
 }
 
 egen nchild=rowmax(children_*)
-replace nchild=0 if missing(nchild)
+replace nchild=0 if missing(nchild) & sex==2
 egen nchild_alt=rowtotal(child_*)
 label var nchild "Number of own children living in the house"
 
-gen mom=(nchild>0)*(sex==2)
+gen mom=(nchild>0) if sex==2
 label var mom "Is a mom"
 
 label define mom_lbl ///
@@ -200,6 +197,7 @@ label values mom mom_lbl
 * order to account for multiple births) 
 gen births=nchild
 
+* Substract 1 from births for every time an age is repeated among children
 forvalues i=1(1)11{
 
 	local j=`i'+1
@@ -217,12 +215,12 @@ label var age_yng "Age of youngest child"
 label var age_eld "Age of eldest child"
 
 recode age_yng ///
-(0/2 = 1 "0 to 2") ///
-(3/5 = 2 "3 to 5") ///
-(6/8 = 3 "6 to 8") ///
-(9/11 = 4 "9 to 11") ///
-(12/14 = 5 "12 to 14") ///
-(15/17 = 6 "15 to 17") ///
+(0/2 = 1 "0 to 3") ///
+(3/5 = 2 "3 to 6") ///
+(6/8 = 3 "6 to 9") ///
+(9/11 = 4 "9 to 12") ///
+(12/14 = 5 "12 to 15") ///
+(15/17 = 6 "15 to 18") ///
 (nonm = .), ///
 generate(lifeper_yng) label(lifper_yng_lbl)
 
@@ -339,11 +337,11 @@ replace inlf_yr=0 if missing(inlf_yr)
 
 * Then we create the lfp variable for the year
 * We first create a variable that recodes the average hours for people 
-* considered to be in the labor force, to 0 when for unemployed (person reported
+* considered to be in the labor force, to 0 when unemployed (person reported
 * being in the labor force but didn't work enough hours to reach par time), 1
 * for part time and 2 for full time
 egen lfp_yr=cut(avg_hours_inlf), at(0,0.25,0.75,1.25) icodes
-* Add 1 to match the lfp_current
+* Add 1 to match lfp_current
 replace lfp_yr=lfp_yr+1
 * Add people olf with a zero
 replace lfp_yr=0 if missing(lfp_yr)
@@ -357,38 +355,31 @@ label values lfp_yr lfp_lbl
 gen cc_presch_yng=0 if mom==1 & age_yng<=12
 gen cc_sch_yng=0 if mom==1 & age_yng<=12  
 gen cc_xsch_yng=0 if mom==1 & age_yng<=12
-gen cc_xother_yng=0 if mom==1 & age_yng<=12
+gen cc_other_yng=0 if mom==1 & age_yng<=12
 gen cc_pro_yng=0 if mom==1 & age_yng<=12 
 gen cc_inf_yng=0 if mom==1 & age_yng<=12
 
 forvalues i=1(1)12{
 
-	gen cc_presch_`i'=cc1_`i'
-	gen cc_sch_`i'=cc2_`i' 
-	gen cc_xsch_`i'=cce_`i' 
-	gen cc_xother_`i'=cceo_`i' 
-	gen cc_pro_`i'=ccb_`i' 
-	gen cc_inf_`i'=ccin_`i' 
-	
 	replace cc_presch_yng=cc_presch_`i' if age_`i'==age_yng & ///
 	!missing(cc_presch_`i')
 	replace cc_sch_yng=cc_sch_`i' if age_`i'==age_yng & !missing(cc_sch_`i')
 	replace cc_xsch_yng=cc_xsch_`i' if age_`i'==age_yng & !missing(cc_xsch_`i')
-	replace cc_xother_yng=cc_xother_`i' if age_`i'==age_yng ///
-	& !missing(cc_xother_`i')
+	replace cc_other_yng=cc_other_`i' if age_`i'==age_yng ///
+	& !missing(cc_other_`i')
 	replace cc_pro_yng=cc_pro_`i' if age_`i'==age_yng & !missing(cc_pro_`i') 
 	replace cc_inf_yng=cc_inf_`i' if age_`i'==age_yng & !missing(cc_inf_`i')
 }
 
-gen cc_paid_yng=cc_presch_yng+cc_xsch_yng+cc_xother_yng+cc_pro_yng if age_yng<=2
-replace cc_paid_yng=cc_xsch_yng+cc_xother_yng+cc_pro_yng if age_yng>2 & age_yng
+gen cc_paid_yng=cc_presch_yng+cc_xsch_yng+cc_other_yng+cc_pro_yng if age_yng<=2
+replace cc_paid_yng=cc_xsch_yng+cc_other_yng+cc_pro_yng if age_yng>2 & age_yng
 gen cc_unpaid_yng=cc_sch_yng+cc_inf_yng if age_yng<=2
 replace cc_unpaid_yng=cc_presch_yng+cc_sch_yng+cc_inf_yng if age_yng>2
 
 label var cc_paid_yng "Weekly hours of paid childcare for youngest child"
 label var cc_unpaid_yng "Weekly hours of unpaid childcare for youngest child" 
 
-gen cc_mom=(24-8)*5-cc_paid-cc_unpaid
+*gen cc_mom=(24-8)*5-cc_paid-cc_unpaid
 *gen wrk_hrs=(lfp==0)*0+(lfp==1)*20+(lfp==2)*40
 *gen le_hrs_mom=(24-8)*5-cc_mom-wrk_hrs if mom==1 & age_yng<=12
 
@@ -425,11 +416,11 @@ save ecv_temp.dta, replace
 * Keep only women and variables we need *
 *****************************************
 
-keep if sex==2 & lifeper>=1 & births<=3 & nchild<=3
+keep if sex==2 & age>=27 & births<=3 & nchild<=3
 
 keep year age lifeper marst mom nchild age_yng lifeper_yng age_eld ///
-age_fbirth lfp_current lfp_yr cc_presch_yng cc_sch_yng cc_xsch_yng ///
-cc_xother_yng cc_pro_yng cc_inf_yng cc_paid_yng cc_unpaid_yng hhinc_5tile ///
+age_fbirth lfp_current lfp_yr ue pt ft cc_presch_yng cc_sch_yng cc_xsch_yng ///
+cc_other_yng cc_pro_yng cc_inf_yng cc_paid_yng cc_unpaid_yng hhinc_5tile ///
 perwt_cs pweight_16plus
 
 cd "$output"
@@ -439,15 +430,16 @@ save ecv_women.dta, replace
 *********************
 
 * Childcare use *
+*****************
 
-* By age
+* By age and average lfp through the year
 preserve
 
-collapse cc_presch_yng cc_sch_yng cc_xsch_yng cc_xother_yng cc_pro_yng ///
+collapse cc_presch_yng cc_sch_yng cc_xsch_yng cc_other_yng cc_pro_yng ///
 cc_inf_yng cc_paid_yng cc_unpaid_yng if age_yng<=12 [iweight=perwt_cs], ///
 by(year lfp_yr age_yng)
 
-collapse cc_presch_yng cc_sch_yng cc_xsch_yng cc_xother_yng cc_pro_yng ///
+collapse cc_presch_yng cc_sch_yng cc_xsch_yng cc_other_yng cc_pro_yng ///
 cc_inf_yng cc_paid_yng cc_unpaid_yng, by(lfp_yr age_yng)
 
 twoway ///
@@ -485,33 +477,179 @@ name(ccpaid_lfp)
 
 restore 
 
-* By model life period
+* By age and current lfp 
 preserve
 
-collapse cc_presch_yng cc_sch_yng cc_xsch_yng cc_xother_yng cc_pro_yng ///
+collapse cc_presch_yng cc_sch_yng cc_xsch_yng cc_other_yng cc_pro_yng ///
+cc_inf_yng cc_paid_yng cc_unpaid_yng if age_yng<=12 [iweight=perwt_cs], ///
+by(year lfp_current age_yng)
+
+collapse cc_presch_yng cc_sch_yng cc_xsch_yng cc_other_yng cc_pro_yng ///
+cc_inf_yng cc_paid_yng cc_unpaid_yng, by(lfp_current age_yng)
+
+twoway ///
+(line cc_presch_yng age_yng if lfp==0 & age_yng<=5) ///
+(line cc_presch_yng age_yng if lfp==1 & age_yng<=5) ///
+(line cc_presch_yng age_yng if lfp==2 & age_yng<=5), ///
+xline(3, lcolor(red)) ///
+scheme(sj) graphr(c(white)) ///
+xtitle("Age of youngest child") ytitle("Hours per week") ///
+legend(order(1 2 3) label(1 "Out of labor force") label(2 "Part-time work") ///
+label(3 "Full-time work") cols(1) region(c(white))) ///
+name(presch_lfp_current)
+
+twoway ///
+(line cc_inf_yng age_yng if lfp==0 & age_yng<=5) ///
+(line cc_inf_yng age_yng if lfp==1 & age_yng<=5) ///
+(line cc_inf_yng age_yng if lfp==2 & age_yng<=5), ///
+xline(3, lcolor(red)) ///
+scheme(sj) graphr(c(white)) ///
+xtitle("Age of youngest child") ytitle("Hours per week") ///
+legend(order(1 2 3) label(1 "Out of labor force") label(2 "Part-time work") ///
+label(3 "Full-time work") cols(1) region(c(white))) ///
+name(inf_lfp_current)
+
+twoway ///
+(line cc_paid_yng age_yng if lfp==0 & age_yng<=5) ///
+(line cc_paid_yng age_yng if lfp==1 & age_yng<=5) ///
+(line cc_paid_yng age_yng if lfp==2 & age_yng<=5), ///
+xline(3, lcolor(red)) ///
+scheme(sj) graphr(c(white)) ///
+xtitle("Age of youngest child") ytitle("Hours per week") ///
+legend(order(1 2 3) label(1 "Out of labor force") label(2 "Part-time work") ///
+label(3 "Full-time work") cols(1) region(c(white))) ///
+name(ccpaid_lfp_current)
+
+restore 
+
+* By model life period and lfp through the year
+preserve
+
+collapse cc_presch_yng cc_sch_yng cc_xsch_yng cc_other_yng cc_pro_yng ///
 cc_inf_yng cc_paid_yng cc_unpaid_yng if age_yng<=12 [iweight=perwt_cs], ///
 by(year lfp_yr lifeper_yng)
 
-collapse cc_presch_yng cc_sch_yng cc_xsch_yng cc_xother_yng cc_pro_yng ///
+collapse cc_presch_yng cc_sch_yng cc_xsch_yng cc_other_yng cc_pro_yng ///
 cc_inf_yng cc_paid_yng cc_unpaid_yng, by(lfp_yr lifeper_yng)
 
-graph bar cc_presch_yng if lfp_yr<=2 & lifeper_yng<=2, ///
+graph bar cc_presch_yng if lfp_yr!=1 & lifeper_yng<=2, ///
 over(lfp_yr, relabel(1 "Inactive" 2 "Part time" 3 "Full time" )) ///
 over(lifeper_yng, relabel(1 "0 to 3 years old" 2 "3 to 6 years old")) ///
 scheme(sj) graphr(c(white)) ytitle("Hours per week") ///
 name(presch_lfp_lifeper_yng)
 
-graph bar cc_inf_yng if lfp_yr<=2 & lifeper_yng<=2, ///
+graph bar cc_inf_yng if lfp_yr!=1 & lifeper_yng<=2, ///
 over(lfp_yr, relabel(1 "Inactive" 2 "Part time" 3 "Full time" )) ///
 over(lifeper_yng, relabel(1 "0 to 3 years old" 2 "3 to 6 years old")) ///
 scheme(sj) graphr(c(white)) ytitle("Hours per week") ///
 name(inf_lfp_lifeper_yng)
 
-graph bar cc_paid_yng if lfp_yr<=2 & lifeper_yng<=2, ///
+graph bar cc_paid_yng if lfp_yr!=1 & lifeper_yng<=2, ///
 over(lfp_yr, relabel(1 "Inactive" 2 "Part time" 3 "Full time" )) ///
 over(lifeper_yng, relabel(1 "0 to 3 years old" 2 "3 to 6 years old")) ///
 scheme(sj) graphr(c(white)) ytitle("Hours per week") ///
 name(paid_lfp_lifeper_yng)
+
+restore
+
+* By model life period and current lfp
+preserve
+
+collapse cc_presch_yng cc_sch_yng cc_xsch_yng cc_other_yng cc_pro_yng ///
+cc_inf_yng cc_paid_yng cc_unpaid_yng if age_yng<=12 [iweight=perwt_cs], ///
+by(year lfp_current lifeper_yng)
+
+collapse cc_presch_yng cc_sch_yng cc_xsch_yng cc_other_yng cc_pro_yng ///
+cc_inf_yng cc_paid_yng cc_unpaid_yng, by(lfp_current lifeper_yng)
+
+graph bar cc_presch_yng if lfp_current<=2 & lifeper_yng<=2, ///
+over(lfp_current, relabel(1 "Inactive" 2 "Part time" 3 "Full time" )) ///
+over(lifeper_yng, relabel(1 "0 to 3 years old" 2 "3 to 6 years old")) ///
+scheme(sj) graphr(c(white)) ytitle("Hours per week") ///
+name(presch_lfp_current_lifeper_yng)
+
+graph bar cc_inf_yng if lfp_current<=2 & lifeper_yng<=2, ///
+over(lfp_current, relabel(1 "Inactive" 2 "Part time" 3 "Full time" )) ///
+over(lifeper_yng, relabel(1 "0 to 3 years old" 2 "3 to 6 years old")) ///
+scheme(sj) graphr(c(white)) ytitle("Hours per week") ///
+name(inf_lfp_current_lifeper_yng)
+
+graph bar cc_paid_yng if lfp_current<=2 & lifeper_yng<=2, ///
+over(lfp_current, relabel(1 "Inactive" 2 "Part time" 3 "Full time" )) ///
+over(lifeper_yng, relabel(1 "0 to 3 years old" 2 "3 to 6 years old")) ///
+scheme(sj) graphr(c(white)) ytitle("Hours per week") ///
+name(paid_lfp_current_lifeper_yng)
+
+restore
+
+* Restrict to those that use positive amounts of pre-school
+preserve
+
+collapse cc_presch_yng cc_sch_yng cc_xsch_yng cc_other_yng cc_pro_yng ///
+cc_inf_yng cc_paid_yng cc_unpaid_yng if age_yng<=12 & cc_presch_yng>0 ///
+[iweight=perwt_cs], by(year lfp_current lifeper_yng)
+
+collapse cc_presch_yng cc_sch_yng cc_xsch_yng cc_other_yng cc_pro_yng ///
+cc_inf_yng cc_paid_yng cc_unpaid_yng, by(lfp_current lifeper_yng)
+
+graph bar cc_presch_yng if lfp_current<=2 & lifeper_yng<=2, ///
+over(lfp_current, relabel(1 "Inactive" 2 "Part time" 3 "Full time" )) ///
+over(lifeper_yng, relabel(1 "0 to 3 years old" 2 "3 to 6 years old")) ///
+scheme(sj) graphr(c(white)) ytitle("Hours per week") 
+
+///
+name(presch_lfp_current_lifeper_yng)
+
+graph bar cc_inf_yng if lfp_current<=2 & lifeper_yng<=2, ///
+over(lfp_current, relabel(1 "Inactive" 2 "Part time" 3 "Full time" )) ///
+over(lifeper_yng, relabel(1 "0 to 3 years old" 2 "3 to 6 years old")) ///
+scheme(sj) graphr(c(white)) ytitle("Hours per week") 
+
+///
+name(inf_lfp_current_lifeper_yng)
+
+graph bar cc_paid_yng if lfp_current<=2 & lifeper_yng<=2, ///
+over(lfp_current, relabel(1 "Inactive" 2 "Part time" 3 "Full time" )) ///
+over(lifeper_yng, relabel(1 "0 to 3 years old" 2 "3 to 6 years old")) ///
+scheme(sj) graphr(c(white)) ytitle("Hours per week") ///
+name(paid_lfp_current_lifeper_yng)
+
+restore
+
+* Restrict to those that use positive amounts of informal childcare
+preserve
+
+collapse cc_presch_yng cc_sch_yng cc_xsch_yng cc_other_yng cc_pro_yng ///
+cc_inf_yng cc_paid_yng cc_unpaid_yng if age_yng<=12 & cc_inf_yng>0 ///
+[iweight=perwt_cs], by(year lfp_current lifeper_yng)
+
+collapse cc_presch_yng cc_sch_yng cc_xsch_yng cc_other_yng cc_pro_yng ///
+cc_inf_yng cc_paid_yng cc_unpaid_yng, by(lfp_current lifeper_yng)
+
+graph bar cc_presch_yng if lfp_current<=2 & lifeper_yng<=2, ///
+over(lfp_current, relabel(1 "Inactive" 2 "Part time" 3 "Full time" )) ///
+over(lifeper_yng, relabel(1 "0 to 3 years old" 2 "3 to 6 years old")) ///
+scheme(sj) graphr(c(white)) ytitle("Hours per week") 
+
+///
+name(presch_lfp_current_lifeper_yng)
+
+graph bar cc_inf_yng if lfp_current<=2 & lifeper_yng<=2, ///
+over(lfp_current, relabel(1 "Inactive" 2 "Part time" 3 "Full time" )) ///
+over(lifeper_yng, relabel(1 "0 to 3 years old" 2 "3 to 6 years old")) ///
+scheme(sj) graphr(c(white)) ytitle("Hours per week") 
+
+///
+name(inf_lfp_current_lifeper_yng)
+
+graph bar cc_paid_yng if lfp_current<=2 & lifeper_yng<=2, ///
+over(lfp_current, relabel(1 "Inactive" 2 "Part time" 3 "Full time" )) ///
+over(lifeper_yng, relabel(1 "0 to 3 years old" 2 "3 to 6 years old")) ///
+scheme(sj) graphr(c(white)) ytitle("Hours per week") ///
+name(paid_lfp_current_lifeper_yng)
+
+restore
+
 
 * I want to check whether few households have access to informal childcare
 * INSTALL ssc install asgen
@@ -542,8 +680,10 @@ legend(order(1 2 3) label(1 "Out of labor force") label(2 "Part-time work") ///
 label(3 "Full-time work") cols(1) region(c(white))) ///
 name(inf_lfp_yes)
 
-
 restore
+
+
+
 
 
 

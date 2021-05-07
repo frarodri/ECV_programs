@@ -14,7 +14,7 @@ global rootdir  "C:\Users\lidic\OneDrive\Escritorio\Cruces&Rodríguez\Encuesta d
 global rawdata "$rootdir\rawdata"
 global output "$rootdir\output"
 global intermediate "$rootdir\intermediate"
-global programs "$rootdir\programs"
+global programs "$rootdir\ECV_programs"
 
 cd "$rootdir"
 cd "$output"

@@ -11,7 +11,7 @@ global rootdir "C:\Users\franj\Documents\GitHub\ECV\working"
 global rawdata "$rootdir\rawdata"
 global output "$rootdir\output"
 global intermediate "$rootdir\intermediate"
-global programs "$rootdir\programs"
+global programs "$rootdir\ECV_programs"
 
 cd "$rootdir"
 

@@ -7,7 +7,6 @@ You should create 4 folders called rawdata, output, intermediate and programs.
 Download the data from INE's website and unzip as is in rawdata. Place this code 
 in programs. The final dataset will be stored in output. Change the folder 
 structure of this code at your own risk!  
-
 Authors: Lidia Cruces, F. Javier Rodríguez-Román 
 */
 
@@ -117,7 +116,7 @@ foreach t of local years {
 cd "$output"
 local years "11 12 13 14 15 16 17 18 19"
 label data "ECV for `years'"
-save ecv, replace
+save ecv, replace 
 
 *************************
 * Renaming and labeling *
@@ -128,13 +127,41 @@ save ecv, replace
 
 * Basic information and childcare *
 * Rename variables
-rename (db010 db020 rb030 rb050 rb050_f rb070 rb070_f rb080 rb080_f ///
-rb090 rb090_f rb200 rb200_f rb210 rb210_f rb220 rb220_f rb230 rb230_f ///
-rb240 rb240_f rl010 rl010_f rl020 rl020_f rl030 rl030_f rl040 rl040_f ///
-rl050 rl050_f rl060 rl060_f rl070 rl070_f) (year country pid perwt_cs ///
-perwt_cs_f birthmo birthmo_f birthyr birthyr_f sex sex_f sith sith_f ///
-act_last act_last_f fid fid_f mid mid_f sid sid_f cc1 cc1_f cc2 cc2_f ///
-cce cce_f cceo cceo_f ccb ccb_f ccin ccin_f cweight cweight_f)
+rename db010 year
+rename db020 country
+rename rb030 pid
+rename rb050 perwt_cs
+rename rb050_f perwt_cs_f
+rename rb070 birthmo
+rename rb070_f birthmo_f
+rename rb080 birthyr 
+rename rb080_f birthyr_f
+rename rb090 sex
+rename rb090_f sex_f
+rename rb200 sith
+rename rb200_f sith_f
+rename rb210 act_lastwk
+rename rb210_f act_lastwk_f
+rename rb220 fid
+rename rb220_f fid_f
+rename rb230 mid
+rename rb230_f mid_f
+rename rb240 sid
+rename rb240_f sid_f
+rename rl010 cc_presch
+rename rl010_f cc_presch_f
+rename rl020 cc_sch
+rename rl020_f cc_sch_f
+rename rl030 cc_xsch
+rename rl030_f cc_xsch_f
+rename rl040 cc_other
+rename rl040_f cc_other_f
+rename rl050 cc_pro
+rename rl050_f cc_pro_f
+rename rl060 cc_inf 
+rename rl060_f cc_inf_f
+rename rl070 ccweight
+rename rl070_f ccweight_f 
 
 * Label variables
 label var year "Year"
@@ -150,28 +177,33 @@ label var sex "Sex"
 label var sex_f "Sex flag"
 label var sith "Situation at home"
 label var sith_f "Situation at home flag"
-label var act_last "Activity last week"
-label var act_last_f "Activity last week flag"
+label var act_lastwk "Activity last week"
+label var act_lastwk_f "Activity last week flag"
 label var fid "Father's identifier"
 label var fid_f "Father's identifier flag "
 label var mid "Mother's identifier "
 label var mid_f "Mother's identifier flag "
 label var sid "Spouse/partner's identifier"
 label var sid_f "Spouse/partner's identifier flag"
-label var cc1 "Hours per week of childcare in school (0-6)"
-label var cc1_f "Hours per week of childcare in school (0-6) flag"
-label var cc2 "Hours per week of childcare in prim and sec school"
-label var cc2_f "Hours per week of childcare in prim and sec school flag"
-label var cce "Hours per week of extra childcare"
-label var cce_f "Hours per week of extra childcare flag"
-label var cceo "Hours per week of extra childcare other centers"
-label var cceo_f "Hours per week of extra childcare other centers flag"
-label var ccb "Hours per week of babysitters childcare"
-label var ccb_f "Hours per week of babysitters childcare flag"
-label var ccin "Hours per week of informal childcare"
-label var ccin_f "Hours per week of informal childcare flag"
-label var cweight "Cross-sectional child weight"
-label var cweight_f "Cross-sectional child weight flag"
+label var cc_presch "Childcare hours per week at preschool/kindergarten"
+label var cc_presch_f ///
+"Childcare hours per week at preschool/kindergarten flag"
+label var cc_sch "Childcare hours per week at school (primary or secondary)"
+label var cc_sch_f ///
+"Childcare hours per week at school (primary or secondary) flag"
+label var cc_xsch "Childcare hours per week outside school hours"
+label var cc_xsch "Childcare hours per week outside school hours flag"
+label var cc_other "Childcare hours per week in other childcare centers"
+label var cc_other_f "Childcare hours per week in other childcare centers flag"
+label var cc_pro "Childcare hours per week by paid professionals (babysitters)"
+label var cc_pro_f ///
+"Childcare hours per week by paid professionals (babysitters) flag"
+label var cc_inf ///
+"Childcare hours per week by unpaid adults (other than parents)"
+label var cc_inf_f ///
+"Childcare hours per week by unpaid adults (other than parents) flag"
+label var ccweight "Cross-sectional childcare weight"
+label var ccweight_f "Cross-sectional childcare weight flag"
 
 * Label values
 label define sex_lbl ///
@@ -184,12 +216,12 @@ label define sith_lbl ///
 2 "Temporarily out of the household"
 label values sith sith_lbl
 
-label define act_last_lbl ///
+label define act_lastwk_lbl ///
 1 "Working" ///
 2 "Not working" ///
 3 "Retired" ///
 4 "Other" 
-label values act_last act_last_lbl
+label values act_lastwk act_last_lbl
 
 * Person data (fichero p) *
 ***************************
